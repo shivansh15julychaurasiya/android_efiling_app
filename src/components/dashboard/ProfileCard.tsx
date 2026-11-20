@@ -1,7 +1,16 @@
 import React from 'react';
 import { Image, Text, View } from 'react-native';
+
 import { LoggedInUser } from '../../types/dashboard';
 import styles from '../../styles/dashboardStyles';
+/*
+ * ============================================================
+ * Developed By : Vijay Chaurasiya
+ * Module       : Dashboard Profile Card
+ * Application  : Allahabad High Court eFiling App
+ * Description  : Displays advocate details and profile image.
+ * ============================================================
+ */
 
 type Props = {
   user: LoggedInUser | null;
@@ -13,30 +22,57 @@ type Props = {
 };
 
 const ProfileCard: React.FC<Props> = ({
-  user, profileImage, getUserName, getInitials, getRole, getLastLogin,
+  user,
+  profileImage,
+  getUserName,
+  getInitials,
+  getRole,
+  getLastLogin,
 }) => (
   <View style={styles.profileCard}>
     <View style={styles.profileHeader}>
       <View style={styles.profileImageWrapper}>
         {profileImage ? (
-          <Image source={{ uri: profileImage }} style={styles.profileImage} />
+          <Image
+            key={profileImage}
+            source={{ uri: profileImage }}
+            style={styles.profileImage}
+            resizeMode="cover"
+            onError={() => {
+              if (__DEV__) {
+                console.log('[DASHBOARD PROFILE IMAGE] Display failed');
+              }
+            }}
+          />
         ) : (
           <View style={styles.profileInitials}>
-            <Text style={styles.profileInitialsText}>{getInitials()}</Text>
+            <Text style={styles.profileInitialsText}>
+              {getInitials()}
+            </Text>
           </View>
         )}
+
         <View style={styles.onlineDot} />
       </View>
 
       <View style={styles.profileMainInfo}>
         <Text style={styles.profileWelcome}>Welcome back</Text>
-        <Text style={styles.profileName} numberOfLines={1}>{getUserName()}</Text>
+
+        <Text style={styles.profileName} numberOfLines={1}>
+          {getUserName()}
+        </Text>
+
         <View style={styles.roleLastLoginRow}>
           <View style={styles.roleBadge}>
-            <Text style={styles.roleBadgeText}>{getRole()}</Text>
+            <Text style={styles.roleBadgeText}>
+              {getRole()}
+            </Text>
           </View>
+
           <View style={styles.roleBadge}>
-            <Text style={styles.roleBadgeText}>Last Login: {getLastLogin()}</Text>
+            <Text style={styles.roleBadgeText}>
+              Last Login: {getLastLogin()}
+            </Text>
           </View>
         </View>
       </View>
@@ -51,10 +87,14 @@ const ProfileCard: React.FC<Props> = ({
           {user?.username || 'Not available'}
         </Text>
       </View>
+
       <View style={styles.detailSeparator} />
+
       <View style={styles.profileDetail}>
         <Text style={styles.profileDetailLabel}>MOBILE</Text>
-        <Text style={styles.profileDetailValue}>{user?.um_mobile || 'Not available'}</Text>
+        <Text style={styles.profileDetailValue}>
+          {user?.um_mobile || 'Not available'}
+        </Text>
       </View>
     </View>
 
@@ -65,10 +105,14 @@ const ProfileCard: React.FC<Props> = ({
           {user?.um_email || 'Not available'}
         </Text>
       </View>
+
       <View style={styles.detailSeparator} />
+
       <View style={styles.profileDetail}>
         <Text style={styles.profileDetailLabel}>ROLE</Text>
-        <Text style={styles.profileDetailValue}>{getRole()}</Text>
+        <Text style={styles.profileDetailValue}>
+          {getRole()}
+        </Text>
       </View>
     </View>
   </View>

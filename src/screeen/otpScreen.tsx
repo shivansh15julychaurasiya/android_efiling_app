@@ -66,107 +66,104 @@ const OtpScreen = ({
   /*
    * OTP resend timer
    */
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setSeconds(current => {
-        if (current <= 1) {
-          clearInterval(timer);
-          return 0;
-        }
+useEffect(() => {
+  if (seconds <= 0) {
+    return;
+  }
 
-        return current - 1;
-      });
-    }, 1000);
+  const timer = setTimeout(() => {
+    setSeconds(current => Math.max(0, current - 1));
+  }, 1000);
 
-    return () => {
-      clearInterval(timer);
-    };
-  }, []);
+  return () => clearTimeout(timer);
+}, [seconds]);
 
   /*
    * Verify OTP
    */
-  const handleVerify = async () => {
-    if (otp.length !== 4) {
-      Alert.alert(
-        'Invalid OTP',
-        'Please enter the 4-digit OTP.',
-      );
+  
+const verifyInProgress = useRef(false);
 
-      return;
-    }
+const handleVerify = async () => {
+  if (verifyInProgress.current || loading) {
+    return;
+  }
 
-    if (loading) {
-      return;
-    }
+  const normalizedOtp = otp.trim();
 
-    try {
-      setLoading(true);
+  if (!/^\d{4}$/.test(normalizedOtp)) {
+    Alert.alert(
+      'Invalid OTP',
+      'Please enter a valid 4-digit OTP.',
+    );
+    return;
+  }
 
-      const response = await validateOtp(
-        username,
-        otp,
-      );
+  verifyInProgress.current = true;
 
-      console.log(
-        'Validate OTP Response:',
-        response,
-      );
+  try {
+    setLoading(true);
 
-      if (
-        response?.response?.toUpperCase() ===
-        'TRUE'
-      ) {
-        /*
-         * Save authentication locally
-         */
-        await saveAuthentication(username);
+    const response = await validateOtp(
+      username,
+      normalizedOtp,
+    );
 
-        /*
-         * OTP verified successfully.
-         *
-         * Reset navigation stack and open
-         * Advocate Dashboard.
-         *
-         * Login and OTP will no longer be
-         * present in the navigation stack.
-         */
-        navigation.reset({
-          index: 0,
-          routes: [
-            {
-              name: 'AdvocateDashboard',
-            },
-          ],
-        });
+    const isSuccess =
+      response?.response?.toUpperCase() === 'TRUE';
 
-        return;
-      }
-
+    if (!isSuccess) {
       const message =
         typeof response?.data === 'string'
           ? response.data
           : response?.message ||
             'Incorrect OTP. Please try again.';
 
-      Alert.alert(
-        'Verification Failed',
-        message,
-      );
-    } catch (error) {
-      console.log(
-        'Validate OTP Error:',
-        error,
-      );
-
-      Alert.alert(
-        'Verification Error',
-        getApiErrorMessage(error),
-      );
-    } finally {
-      setLoading(false);
+      Alert.alert('Verification Failed', message);
+      return;
     }
-  };
+
+    // Save local authentication state.
+    await saveAuthentication(username);
+
+    // Check the actual server session separately.
+    const { getSessionCookie } = await import('../api/apiClient');
+
+    const cookie = await getSessionCookie();
+
+    if (__DEV__) {
+      console.log('[LOGIN SESSION RESULT]', {
+        authenticated: true,
+        sessionAvailable: !!cookie,
+      });
+    }
+
+    navigation.reset({
+      index: 0,
+      routes: [
+        { name: 'AdvocateDashboard' },
+      ],
+    });
+  } catch (error) {
+    console.log('[OTP VERIFICATION ERROR]', error);
+
+    Alert.alert(
+      'Verification Error',
+      getApiErrorMessage(error),
+    );
+  } finally {
+    verifyInProgress.current = false;
+    setLoading(false);
+  }
+};
+
+
+
+
+
+
+
+  
 
   /*
    * Resend OTP

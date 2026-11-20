@@ -8,5 +8,9 @@ export type RootStackParamList = {
   CaseFilePetition: undefined;
   CaseFileRespondent:undefined;
     DraftManagement: undefined;
+    AdvCauseList:undefined;
+    CaseDocuments:undefined;
+    Profile: undefined;
+ChangePassword: undefined;
 
 };

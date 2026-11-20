@@ -7,7 +7,7 @@ type Props = { onRefresh: () => void };
 const DashboardHeading: React.FC<Props> = ({ onRefresh }) => (
   <View style={styles.dashboardHeading}>
     <View>
-      <Text style={styles.dashboardTitle}>Your e-Filing Dashboard</Text>
+      <Text style={styles.dashboardTitle}>Your Dashboard</Text>
       <Text style={styles.dashboardSubtitle}>Manage your cases and court services</Text>
     </View>
     <TouchableOpacity style={styles.refreshSmallButton} onPress={onRefresh} activeOpacity={0.8}>

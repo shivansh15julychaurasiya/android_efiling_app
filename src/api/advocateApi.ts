@@ -1,5 +1,10 @@
 import apiClient from './apiClient';
 
+/* =========================================================
+   Vijay Chaurasiya
+   CAUSE LIST, SITTING COURT & LAST ORDER API SERVICES
+========================================================= */
+
 export const getCauseListDate = async (): Promise<any> => {
   const date = new Date();
 
@@ -7,10 +12,7 @@ export const getCauseListDate = async (): Promise<any> => {
     '/ecourt/getCauseListDate/' + date.toString(),
   );
 
-  console.log(
-    'GET CAUSE LIST STATUS:',
-    response.status,
-  );
+  console.log('GET CAUSE LIST STATUS:', response.status);
 
   console.log(
     'GET CAUSE LIST DATA:',
@@ -22,6 +24,10 @@ export const getCauseListDate = async (): Promise<any> => {
   return response.data;
 };
 
+/* =========================================================
+   Vijay Chaurasiya — SITTING COURT DETAILS
+========================================================= */
+
 export const getSittingCourt = async (): Promise<any> => {
   const date = new Date();
 
@@ -29,16 +35,35 @@ export const getSittingCourt = async (): Promise<any> => {
     '/ecourt/getSittingCourt/' + date.toString(),
   );
 
-  console.log(
-    'GET SITTING COURT STATUS:',
-    response.status,
-  );
+  console.log('GET SITTING COURT STATUS:', response.status);
 
   console.log(
     'GET SITTING COURT DATA:',
     typeof response.data === 'string'
       ? response.data.substring(0, 2000)
       : JSON.stringify(response.data, null, 2),
+  );
+
+  return response.data;
+};
+
+/* =========================================================
+   Vijay Chaurasiya — ELEGALIX LAST ORDER API
+========================================================= */
+
+export const getOrderFromElegalix = async (
+  judgmentID: string | number,
+): Promise<any> => {
+  const response = await apiClient.get(
+    '/ecourt/getOrderFromElegalix/' +
+      encodeURIComponent(String(judgmentID)),
+  );
+
+  console.log('GET LAST ORDER STATUS:', response.status);
+
+  console.log(
+    'GET LAST ORDER DATA:',
+    JSON.stringify(response.data, null, 2),
   );
 
   return response.data;

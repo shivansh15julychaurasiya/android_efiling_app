@@ -147,7 +147,7 @@ const styles = StyleSheet.create({
   caseCourt: { marginTop: 5, fontSize: 12, color: '#555555' },
   benchName: { marginTop: 5, fontSize: 13, color: '#7C3AED', fontWeight: '600' },
   lastOrderLink: {
-    color: '#1565C0', textDecorationLine: 'underline',
+    color: '#bd12e7', textDecorationLine: 'underline',
     fontSize: 14, fontWeight: '600', marginTop: 6,
   },
   emptyContainer: { paddingVertical: 30, alignItems: 'center' },
