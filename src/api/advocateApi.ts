@@ -5,11 +5,19 @@ import apiClient from './apiClient';
    CAUSE LIST, SITTING COURT & LAST ORDER API SERVICES
 ========================================================= */
 
-export const getCauseListDate = async (): Promise<any> => {
-  const date = new Date();
+
+export const getCauseListDate = async (
+  selectedDate?: string,
+): Promise<any> => {
+const dateParameter = selectedDate
+  ? selectedDate.toString()
+  : new Date(2026, 10, 23).toString();
+
+  console.log('CAUSE LIST REQUEST DATE:', dateParameter);
 
   const response = await apiClient.get(
-    '/ecourt/getCauseListDate/' + date.toString(),
+    '/ecourt/getCauseListDate/' +
+      encodeURIComponent(dateParameter),
   );
 
   console.log('GET CAUSE LIST STATUS:', response.status);
@@ -23,6 +31,7 @@ export const getCauseListDate = async (): Promise<any> => {
 
   return response.data;
 };
+
 
 /* =========================================================
    Vijay Chaurasiya — SITTING COURT DETAILS
