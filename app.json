@@ -13,7 +13,6 @@
     },
 
     "android": {
-      "usesCleartextTraffic": true,
       "adaptiveIcon": {
         "backgroundColor": "#071A3D",
         "foregroundImage": "./assets/adv_dash.png"

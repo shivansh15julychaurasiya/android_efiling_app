@@ -4,6 +4,8 @@ import apiClient, {
   getSessionCookie,
 } from './apiClient';
 
+
+import { verifyAndroidIntegrity } from '../services/security/verifyIntegrity';
 import {
   ApiResponse,
   GenerateOtpRequest,
@@ -164,7 +166,7 @@ export const getLoggedInUser = async (): Promise<any> => {
    GET DASHBOARD
 ======================================================= */
 
-export const getDashboard = async (): Promise<any> => {
+export const getDashboardOld = async (): Promise<any> => {
   const response = await apiClient.get(
     '/ecourt/getDashboard',
   );
@@ -179,7 +181,35 @@ export const getDashboard = async (): Promise<any> => {
 
   return response.data;
 };
+export const getDashboard = async (): Promise<any> => {
+  try {
+    // Step 1: Generate and verify Play Integrity token
+    const integrityResult = await verifyAndroidIntegrity();
 
+    if (__DEV__) {
+      console.log('[DASHBOARD INTEGRITY]', integrityResult);
+    }
+
+    // Step 2: Call dashboard API
+    const response = await apiClient.get(
+      '/ecourt/getDashboard',
+    );
+
+    if (__DEV__) {
+      console.log('[GET DASHBOARD]', {
+        status: response.status,
+        contentType: response.headers?.['content-type'],
+        dataType: typeof response.data,
+      });
+    }
+
+    return response.data;
+
+  } catch (error) {
+    console.log('[DASHBOARD SECURITY ERROR]', error);
+    throw error;
+  }
+};
 /* =======================================================
    LOGOUT
 ======================================================= */
