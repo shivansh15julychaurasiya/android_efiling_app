@@ -4,8 +4,8 @@
  * Developer : Vijay Chaurasiya
  * Project   : Allahabad High Court eFiling Application
  * Module    : Advocate Login Screen
- * Feature   : CAPTCHA, OTP generation, OTP verification,
- *             password validation and dashboard navigation.
+ * Features  : CAPTCHA, OTP Generation, OTP Verification,
+ *             Password Validation and Dashboard Navigation
  * ============================================================
  */
 
@@ -41,13 +41,9 @@ import {
 
 import { getApiErrorMessage } from '../utils/errorHandler';
 
-type LoginScreenProps = {
+interface LoginScreenProps {
   navigation: any;
-};
-
-/* ============================================================
-   THEME
-============================================================ */
+}
 
 const COLORS = {
   navy: '#101D35',
@@ -73,11 +69,6 @@ const COLORS = {
   red: '#C0392B',
 };
 
-/*
- * Supports both common API response formats:
- * 1. { response: "TRUE" }
- * 2. Axios response: { data: { response: "TRUE" } }
- */
 const isApiSuccess = (result: any): boolean => {
   const value =
     result?.response ??
@@ -102,11 +93,12 @@ const getResponseMessage = (
     : fallback;
 };
 
-/* ============================================================
-   LOGIN SCREEN
-============================================================ */
+const LoginScreen: React.FC<LoginScreenProps> = ({
+  navigation,
+}) => {
+  const scrollViewRef = useRef<ScrollView>(null);
+  const otpInputRef = useRef<TextInput>(null);
 
-const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
 
@@ -124,13 +116,6 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   const [loadingVerify, setLoadingVerify] = useState(false);
   const [loadingLogin, setLoadingLogin] = useState(false);
 
-  const scrollViewRef = useRef<ScrollView>(null);
-  const otpInputRef = useRef<TextInput>(null);
-
-  /* ============================================================
-     SCROLL TO OTP
-  ============================================================ */
-
   const scrollToOtp = useCallback(() => {
     requestAnimationFrame(() => {
       scrollViewRef.current?.scrollToEnd({
@@ -139,16 +124,9 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     });
   }, []);
 
-  /* ============================================================
-     CAPTCHA GENERATION
-  ============================================================ */
-
   const generateCaptcha = useCallback(() => {
-    const first = Math.floor(Math.random() * 9) + 1;
-    const second = Math.floor(Math.random() * 9) + 1;
-
-    setCaptchaFirst(first);
-    setCaptchaSecond(second);
+    setCaptchaFirst(Math.floor(Math.random() * 9) + 1);
+    setCaptchaSecond(Math.floor(Math.random() * 9) + 1);
     setCaptchaAnswer('');
   }, []);
 
@@ -156,45 +134,28 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     generateCaptcha();
   }, [generateCaptcha]);
 
-  /* ============================================================
-     RESET OTP WHEN USERNAME CHANGES
-  ============================================================ */
-
   const handleUsernameChange = (value: string) => {
     setUsername(value);
 
-    // OTP belongs to the username for which it was generated.
     setOtp('');
     setOtpSent(false);
     setOtpVerified(false);
   };
 
-  /* ============================================================
-     SCROLL WHEN OTP SECTION APPEARS
-  ============================================================ */
-
   useEffect(() => {
-    if (!otpSent) {
-      return;
+    if (otpSent) {
+      scrollToOtp();
     }
-
-    const timer = setTimeout(scrollToOtp, 300);
-
-    return () => clearTimeout(timer);
   }, [otpSent, scrollToOtp]);
 
-  /* ============================================================
-     KEYBOARD HANDLING
-  ============================================================ */
-
   useEffect(() => {
-    const keyboardShowEvent =
+    const keyboardEvent =
       Platform.OS === 'ios'
         ? 'keyboardWillShow'
         : 'keyboardDidShow';
 
     const subscription = Keyboard.addListener(
-      keyboardShowEvent,
+      keyboardEvent,
       () => {
         if (otpSent) {
           setTimeout(scrollToOtp, 150);
@@ -202,53 +163,36 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
       },
     );
 
-    return () => {
-      subscription.remove();
-    };
+    return () => subscription.remove();
   }, [otpSent, scrollToOtp]);
 
-  /* ============================================================
-     GENERATE / RESEND OTP
-     Developer : Vijay Chaurasiya
-  ============================================================ */
-
   const handleGenerateOtp = async () => {
+    if (loadingOtp) return;
+
     const trimmedUsername = username.trim();
 
-    if (loadingOtp || loadingVerify || loadingLogin) {
-      return;
-    }
-
     if (!trimmedUsername) {
-      Alert.alert(
-        'Username Required',
-        'Please enter your username or roll number.',
-      );
+      Alert.alert('Validation', 'Please enter your username.');
       return;
     }
 
-    if (!password) {
-      Alert.alert(
-        'Password Required',
-        'Please enter your password.',
-      );
+    if (!password.trim()) {
+      Alert.alert('Validation', 'Please enter your password.');
       return;
     }
 
     if (!captchaAnswer.trim()) {
-      Alert.alert(
-        'CAPTCHA Required',
-        'Please solve the CAPTCHA.',
-      );
+      Alert.alert('Validation', 'Please enter the CAPTCHA answer.');
       return;
     }
 
-    const correctAnswer = captchaFirst + captchaSecond;
-
-    if (Number(captchaAnswer) !== correctAnswer) {
+    if (
+      Number(captchaAnswer) !==
+      captchaFirst + captchaSecond
+    ) {
       Alert.alert(
         'Invalid CAPTCHA',
-        'The CAPTCHA answer is incorrect. Please try again.',
+        'Please enter the correct CAPTCHA answer.',
       );
 
       generateCaptcha();
@@ -257,46 +201,46 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
 
     try {
       setLoadingOtp(true);
+      Keyboard.dismiss();
 
-      const response = await generateOtp(trimmedUsername);
+      const result = await generateOtp(trimmedUsername);
 
-      if (isApiSuccess(response)) {
+      if (isApiSuccess(result)) {
         setOtpSent(true);
         setOtpVerified(false);
         setOtp('');
 
         Alert.alert(
           'OTP Sent',
-          'OTP generation was successful. Please check your registered mobile number.',
+          getResponseMessage(
+            result,
+            'OTP has been sent successfully.',
+          ),
           [
             {
               text: 'OK',
               onPress: () => {
-                setTimeout(() => {
-                  scrollToOtp();
+                scrollToOtp();
 
-                  setTimeout(() => {
-                    otpInputRef.current?.focus();
-                  }, 250);
-                }, 150);
+                setTimeout(() => {
+                  otpInputRef.current?.focus();
+                }, 350);
               },
             },
           ],
         );
-
-        return;
+      } else {
+        Alert.alert(
+          'OTP Failed',
+          getResponseMessage(
+            result,
+            'Unable to generate OTP. Please try again.',
+          ),
+        );
       }
-
+    } catch (error: any) {
       Alert.alert(
-        'OTP Request Failed',
-        getResponseMessage(
-          response,
-          'The server did not confirm OTP generation. Please try again.',
-        ),
-      );
-    } catch (error) {
-      Alert.alert(
-        'Connection Error',
+        'Error',
         getApiErrorMessage(error),
       );
     } finally {
@@ -304,33 +248,20 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     }
   };
 
-  /* ============================================================
-     OTP INPUT
-  ============================================================ */
-
   const handleOtpChange = (value: string) => {
     const numericValue = value
       .replace(/[^0-9]/g, '')
       .slice(0, 4);
 
     setOtp(numericValue);
+    setOtpVerified(false);
   };
 
-  /* ============================================================
-     VERIFY OTP
-     Developer : Vijay Chaurasiya
-  ============================================================ */
-
   const handleVerifyOtp = async () => {
-    if (loadingVerify || loadingOtp || loadingLogin) {
-      return;
-    }
+    if (loadingVerify) return;
 
     if (!otpSent) {
-      Alert.alert(
-        'OTP Required',
-        'Please generate an OTP first.',
-      );
+      Alert.alert('Validation', 'Please generate OTP first.');
       return;
     }
 
@@ -346,34 +277,37 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
       setLoadingVerify(true);
       Keyboard.dismiss();
 
-      const response = await validateOtp(
+      const result = await validateOtp(
         username.trim(),
         otp,
       );
 
-      if (isApiSuccess(response)) {
+      if (isApiSuccess(result)) {
         setOtpVerified(true);
 
         Alert.alert(
           'OTP Verified',
-          'Your OTP has been verified successfully. Please tap LOGIN to continue.',
+          getResponseMessage(
+            result,
+            'Your OTP has been verified successfully.',
+          ),
         );
+      } else {
+        setOtpVerified(false);
 
-        return;
+        Alert.alert(
+          'Verification Failed',
+          getResponseMessage(
+            result,
+            'Invalid OTP. Please try again.',
+          ),
+        );
       }
-
+    } catch (error: any) {
       setOtpVerified(false);
 
       Alert.alert(
-        'OTP Verification Failed',
-        getResponseMessage(
-          response,
-          'Invalid OTP. Please try again.',
-        ),
-      );
-    } catch (error) {
-      Alert.alert(
-        'Connection Error',
+        'Error',
         getApiErrorMessage(error),
       );
     } finally {
@@ -381,40 +315,24 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     }
   };
 
-  /* ============================================================
-     FINAL LOGIN
-     Developer : Vijay Chaurasiya
-     Feature   : Password validation after OTP verification
-  ============================================================ */
-
   const handleLogin = async () => {
-    const trimmedUsername = username.trim();
-
-    if (loadingLogin || loadingOtp || loadingVerify) {
-      return;
-    }
+    if (loadingLogin) return;
 
     if (!otpVerified) {
       Alert.alert(
-        'OTP Verification Required',
-        'Please verify your OTP before continuing.',
+        'Verification Required',
+        'Please verify your OTP before login.',
       );
       return;
     }
 
-    if (!trimmedUsername) {
-      Alert.alert(
-        'Username Required',
-        'Please enter your username.',
-      );
+    if (!username.trim()) {
+      Alert.alert('Validation', 'Please enter your username.');
       return;
     }
 
-    if (!password) {
-      Alert.alert(
-        'Password Required',
-        'Please enter your password.',
-      );
+    if (!password.trim()) {
+      Alert.alert('Validation', 'Please enter your password.');
       return;
     }
 
@@ -422,30 +340,32 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
       setLoadingLogin(true);
       Keyboard.dismiss();
 
-      const response = await loginWithPassword(
-        trimmedUsername,
+      const result = await loginWithPassword(
+        username.trim(),
         password,
       );
 
-      if (isApiSuccess(response)) {
+      if (isApiSuccess(result)) {
         navigation.reset({
           index: 0,
-          routes: [{ name: 'AdvocateDashboard' }],
+          routes: [
+            {
+              name: 'AdvocateDashboard',
+            },
+          ],
         });
-
-        return;
+      } else {
+        Alert.alert(
+          'Login Failed',
+          getResponseMessage(
+            result,
+            'Invalid username or password.',
+          ),
+        );
       }
-
+    } catch (error: any) {
       Alert.alert(
-        'Login Failed',
-        getResponseMessage(
-          response,
-          'Invalid username or password.',
-        ),
-      );
-    } catch (error) {
-      Alert.alert(
-        'Connection Error',
+        'Login Error',
         getApiErrorMessage(error),
       );
     } finally {
@@ -453,14 +373,13 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     }
   };
 
-  const otpBoxes = Array.from({ length: 4 }, (_, index) => index);
-
-  /* ============================================================
-     SCREEN UI
-  ============================================================ */
+  const otpBoxes = [0, 1, 2, 3];
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView
+      style={styles.safeArea}
+      edges={['top', 'bottom']}
+    >
       <StatusBar
         backgroundColor={COLORS.navyDark}
         barStyle="light-content"
@@ -468,83 +387,73 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
 
       <KeyboardAvoidingView
         style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={0}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ScrollView
           ref={scrollViewRef}
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
-          automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
           showsVerticalScrollIndicator={false}
         >
-          {/* COURT BRANDING */}
+          {/* HEADER */}
 
           <View style={styles.hero}>
-            <View style={styles.topAccent} />
-            <View style={styles.heroPattern} />
-
-            <View style={styles.emblemOuter}>
-              <View style={styles.emblemInner}>
-                <Text style={styles.emblem}>⚖</Text>
-              </View>
+            <View style={styles.emblem}>
+              <Text style={styles.emblemText}>⚖</Text>
             </View>
 
-            <Text style={styles.courtName}>
-              HIGH COURT OF JUDICATURE
+            <Text style={styles.courtTitle}>
+              HIGH COURT
             </Text>
 
-            <Text style={styles.courtLocation}>
+            <Text style={styles.courtSubtitle}>
               AT ALLAHABAD
             </Text>
 
-            <View style={styles.heroDivider}>
-              <View style={styles.heroDividerLine} />
-              <View style={styles.heroDividerDiamond} />
-              <View style={styles.heroDividerLine} />
-            </View>
+            <View style={styles.heroDivider} />
 
-            <View style={styles.dashboardPill}>
-              <View style={styles.dashboardDot} />
-              <Text style={styles.dashboardPillText}>
-                ADVOCATE DASHBOARD
+            <Text style={styles.heroDescription}>
+              Advocate eFiling Portal
+            </Text>
+
+            <View style={styles.securePill}>
+              <Text style={styles.securePillText}>
+                SECURE DIGITAL ACCESS
               </Text>
             </View>
           </View>
 
-          {/* MAIN LOGIN PANEL */}
+          {/* LOGIN CARD */}
 
           <View style={styles.card}>
             <View style={styles.cardHeadingRow}>
-              <View style={styles.headingContent}>
-                <Text style={styles.cardTitle}>
+              <View>
+                <Text style={styles.heading}>
                   Welcome Back
                 </Text>
 
-                <Text style={styles.cardSubtitle}>
-                  Sign in to access your advocate account
+                <Text style={styles.subHeading}>
+                  Sign in to your advocate account
                 </Text>
               </View>
 
-              <View style={styles.secureBadge}>
-                <Text style={styles.secureIcon}>✓</Text>
-                <Text style={styles.secureText}>SECURE</Text>
+              <View style={styles.lockBadge}>
+                <Text style={styles.lockIcon}>🔒</Text>
               </View>
             </View>
 
             {/* USERNAME */}
 
-            <Text style={styles.label}>
-              Username / Roll Number
+            <Text style={styles.inputLabel}>
+              Username / Enrollment Number
             </Text>
 
             <View style={styles.inputContainer}>
-              <Text style={styles.inputIcon}>♙</Text>
+              <Text style={styles.inputIcon}>👤</Text>
 
               <TextInput
-                style={styles.input}
-                placeholder="Enter username or roll number"
+                style={styles.textInput}
+                placeholder="Enter your username"
                 placeholderTextColor={COLORS.muted}
                 value={username}
                 onChangeText={handleUsernameChange}
@@ -557,32 +466,30 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
 
             {/* PASSWORD */}
 
-            <Text style={styles.label}>
+            <Text style={styles.inputLabel}>
               Password
             </Text>
 
             <View style={styles.inputContainer}>
-              <Text style={styles.inputIcon}>⌑</Text>
+              <Text style={styles.inputIcon}>🔑</Text>
 
               <TextInput
-                style={styles.input}
+                style={styles.textInput}
                 placeholder="Enter your password"
                 placeholderTextColor={COLORS.muted}
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry={!showPassword}
                 autoCapitalize="none"
-                autoCorrect={false}
-                editable={!loadingOtp && !loadingVerify && !loadingLogin}
+                editable={!loadingLogin}
                 returnKeyType="done"
               />
 
               <Pressable
-                onPress={() => setShowPassword(previous => !previous)}
-                style={styles.eyeButton}
-                disabled={loadingLogin}
+                onPress={() => setShowPassword(!showPassword)}
+                style={styles.passwordToggle}
               >
-                <Text style={styles.eyeText}>
+                <Text style={styles.passwordToggleText}>
                   {showPassword ? 'HIDE' : 'SHOW'}
                 </Text>
               </Pressable>
@@ -590,30 +497,22 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
 
             {/* CAPTCHA */}
 
-            <Text style={styles.label}>
-              Solve the following calculation
-            </Text>
+            <View style={styles.captchaHeading}>
+              <Text style={styles.inputLabel}>
+                Security Verification
+              </Text>
+
+              <Text style={styles.captchaHint}>
+                Solve the calculation
+              </Text>
+            </View>
 
             <View style={styles.captchaRow}>
-              <View style={styles.captchaBox}>
-                <Text style={styles.captchaSmallLabel}>
-                  SECURITY CHECK
-                </Text>
-
-                <Text style={styles.captchaText}>
-                  {captchaFirst}{' '}
-                  <Text style={styles.captchaOperator}>+</Text>{' '}
-                  {captchaSecond} = ?
+              <View style={styles.captchaQuestion}>
+                <Text style={styles.captchaQuestionText}>
+                  {captchaFirst} + {captchaSecond} = ?
                 </Text>
               </View>
-
-              <Pressable
-                style={styles.refreshButton}
-                onPress={generateCaptcha}
-                disabled={loadingOtp || loadingVerify || loadingLogin}
-              >
-                <Text style={styles.refreshText}>↻</Text>
-              </Pressable>
 
               <TextInput
                 style={styles.captchaInput}
@@ -621,17 +520,19 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
                 placeholderTextColor={COLORS.muted}
                 keyboardType="number-pad"
                 value={captchaAnswer}
-                onChangeText={value =>
-                  setCaptchaAnswer(
-                    value.replace(/[^0-9]/g, '').slice(0, 2),
-                  )
-                }
-                editable={!loadingOtp && !loadingVerify && !loadingLogin}
-                returnKeyType="done"
+                onChangeText={setCaptchaAnswer}
+                maxLength={2}
               />
+
+              <Pressable
+                style={styles.refreshButton}
+                onPress={generateCaptcha}
+              >
+                <Text style={styles.refreshIcon}>↻</Text>
+              </Pressable>
             </View>
 
-            {/* GENERATE OTP BUTTON */}
+            {/* GENERATE OTP */}
 
             <Pressable
               style={[
@@ -639,71 +540,69 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
                 loadingOtp && styles.disabledButton,
               ]}
               onPress={handleGenerateOtp}
-              disabled={loadingOtp || loadingVerify || loadingLogin}
+              disabled={loadingOtp}
             >
               {loadingOtp ? (
-                <ActivityIndicator
-                  size="small"
-                  color={COLORS.white}
-                />
+                <ActivityIndicator color={COLORS.white} />
               ) : (
-                <>
+                <View style={styles.buttonContent}>
                   <Text style={styles.primaryButtonText}>
-                    {otpSent ? 'RESEND OTP' : 'GENERATE OTP'}
+                    GENERATE OTP
                   </Text>
 
                   <Text style={styles.buttonArrow}>→</Text>
-                </>
+                </View>
               )}
             </Pressable>
 
-            <Text style={styles.buttonHint}>
-              OTP will be sent to your registered mobile number
+            <Text style={styles.bottomHint}>
+              OTP verification is required before login.
             </Text>
 
             {/* OTP SECTION */}
 
             {otpSent && (
               <View style={styles.otpSection}>
-                <View style={styles.otpTopLine} />
+                <View style={styles.sectionDivider} />
 
-                <View style={styles.otpIconCircle}>
-                  <Text style={styles.otpIcon}>✉</Text>
+                <View style={styles.otpHeading}>
+                  <View style={styles.otpIconContainer}>
+                    <Text style={styles.otpIcon}>✉</Text>
+                  </View>
+
+                  <View style={styles.otpHeadingText}>
+                    <Text style={styles.otpTitle}>
+                      OTP Verification
+                    </Text>
+
+                    <Text style={styles.otpSubtitle}>
+                      Enter the 4-digit OTP sent to your registered mobile.
+                    </Text>
+                  </View>
                 </View>
 
-                <Text style={styles.otpTitle}>
-                  Verify Your Identity
-                </Text>
-
-                <Text style={styles.otpSubtitle}>
-                  Enter the 4-digit OTP sent to your registered mobile number.
-                </Text>
-
-                {/* FOUR-DIGIT OTP INPUT */}
+                {/* OTP INPUT BOXES */}
 
                 <Pressable
                   style={styles.otpInputWrapper}
-                  onPress={() => {
-                    if (!otpVerified) {
-                      scrollToOtp();
-                      otpInputRef.current?.focus();
-                    }
-                  }}
-                  disabled={otpVerified}
+                  onPress={() => otpInputRef.current?.focus()}
                 >
-                  <View style={styles.otpRow}>
-                    {otpBoxes.map(index => (
+                  <View style={styles.otpBoxesContainer}>
+                    {otpBoxes.map((item) => (
                       <View
-                        key={index}
+                        key={item}
                         style={[
                           styles.otpBox,
-                          otp.length === index && !otpVerified &&
-                            styles.activeOtpBox,
-                          otp.length > index && styles.filledOtpBox,
+                          otp.length === item && !otpVerified
+                            ? styles.otpBoxActive
+                            : null,
+                          otpVerified
+                            ? styles.otpBoxVerified
+                            : null,
                         ]}
                       >
-                        <Text style={styles.otpBoxText}>
-                          {otp[index] || ''}
+                        <Text style={styles.otpDigit}>
+                          {otp[item] || ''}
                         </Text>
                       </View>
                     ))}
@@ -711,83 +610,62 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
 
                   <TextInput
                     ref={otpInputRef}
-                    style={styles.otpInput}
+                    style={styles.hiddenOtpInput}
                     value={otp}
                     onChangeText={handleOtpChange}
                     keyboardType="number-pad"
                     maxLength={4}
-                    editable={!otpVerified && !loadingVerify}
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    caretHidden
-                    contextMenuHidden
-                    returnKeyType="done"
-                    onFocus={() => {
-                      setTimeout(scrollToOtp, 150);
-                    }}
-                    accessibilityLabel="Enter four-digit OTP"
+                    textContentType="oneTimeCode"
+                    autoComplete="sms-otp"
+                    editable={!otpVerified}
                   />
                 </Pressable>
 
-                {/* VERIFY OTP OR FINAL LOGIN */}
+                {/* VERIFY OTP BUTTON */}
 
-                {!otpVerified ? (
+                {!otpVerified && (
                   <>
-                    {/* STEP 1: VERIFY OTP */}
+                    <View style={styles.actionButtonWrapper}>
+                      <Pressable
+                        style={[
+                          styles.verifyButton,
+                          loadingVerify && styles.disabledButton,
+                        ]}
+                        onPress={handleVerifyOtp}
+                        disabled={loadingVerify}
+                      >
+                        {loadingVerify ? (
+                          <ActivityIndicator color={COLORS.white} />
+                        ) : (
+                          <View style={styles.buttonContent}>
+                            <Text style={styles.primaryButtonText}>
+                              VERIFY OTP
+                            </Text>
 
-                    <Pressable
-                      style={[
-                        styles.verifyButton,
-                        (otp.length !== 4 || loadingVerify) &&
-                          styles.disabledButton,
-                      ]}
-                      onPress={handleVerifyOtp}
-                      disabled={
-                        otp.length !== 4 ||
-                        loadingVerify ||
-                        loadingOtp ||
-                        loadingLogin
-                      }
-                    >
-                      {loadingVerify ? (
-                        <ActivityIndicator
-                          size="small"
-                          color={COLORS.white}
-                        />
-                      ) : (
-                        <>
-                          <Text style={styles.primaryButtonText}>
-                            VERIFY OTP
-                          </Text>
-
-                          <Text style={styles.buttonArrow}>→</Text>
-                        </>
-                      )}
-                    </Pressable>
-
-                    {/* RESEND OTP - ONLY ONE BUTTON */}
+                            <Text style={styles.buttonArrow}>
+                              →
+                            </Text>
+                          </View>
+                        )}
+                      </Pressable>
+                    </View>
 
                     <Pressable
                       style={styles.resendButton}
                       onPress={handleGenerateOtp}
-                      disabled={
-                        loadingOtp ||
-                        loadingVerify ||
-                        loadingLogin
-                      }
+                      disabled={loadingOtp}
                     >
                       <Text style={styles.resendText}>
-                        Didn't receive OTP?{' '}
-                        <Text style={styles.resendHighlight}>
-                          Resend OTP
-                        </Text>
+                        Didn't receive OTP? Resend OTP
                       </Text>
                     </Pressable>
                   </>
-                ) : (
-                  <>
-                    {/* STEP 2: OTP VERIFIED */}
+                )}
 
+                {/* OTP VERIFIED */}
+
+                {otpVerified && (
+                  <>
                     <View style={styles.verifiedMessage}>
                       <Text style={styles.verifiedIcon}>✓</Text>
 
@@ -796,38 +674,35 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
                       </Text>
                     </View>
 
-                    {/* FINAL LOGIN BUTTON */}
+                    {/* LOGIN BUTTON */}
 
-                    <Pressable
-                      style={[
-                        styles.verifyButton,
-                        loadingLogin && styles.disabledButton,
-                      ]}
-                      onPress={handleLogin}
-                      disabled={
-                        loadingLogin ||
-                        loadingOtp ||
-                        loadingVerify
-                      }
-                    >
-                      {loadingLogin ? (
-                        <ActivityIndicator
-                          size="small"
-                          color={COLORS.white}
-                        />
-                      ) : (
-                        <>
-                          <Text style={styles.primaryButtonText}>
-                            LOGIN
-                          </Text>
+                    <View style={styles.actionButtonWrapper}>
+                      <Pressable
+                        style={[
+                          styles.loginButton,
+                          loadingLogin && styles.disabledButton,
+                        ]}
+                        onPress={handleLogin}
+                        disabled={loadingLogin}
+                      >
+                        {loadingLogin ? (
+                          <ActivityIndicator color={COLORS.white} />
+                        ) : (
+                          <View style={styles.buttonContent}>
+                            <Text style={styles.primaryButtonText}>
+                              LOGIN
+                            </Text>
 
-                          <Text style={styles.buttonArrow}>→</Text>
-                        </>
-                      )}
-                    </Pressable>
+                            <Text style={styles.buttonArrow}>
+                              →
+                            </Text>
+                          </View>
+                        )}
+                      </Pressable>
+                    </View>
 
-                    <Text style={styles.buttonHint}>
-                      Your OTP is verified. Tap LOGIN to continue to the Advocate Dashboard.
+                    <Text style={styles.loginHint}>
+                      Your account is verified. You can now login securely.
                     </Text>
                   </>
                 )}
@@ -838,12 +713,16 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
           {/* FOOTER */}
 
           <View style={styles.footer}>
-            <Text style={styles.footerTitle}>
-              HIGH COURT OF JUDICATURE AT ALLAHABAD
+            <Text style={styles.footerText}>
+              Allahabad High Court
             </Text>
 
-            <Text style={styles.footerText}>
-              Secure Digital Filing & Case Management
+            <Text style={styles.footerSubText}>
+              Official Advocate eFiling Application
+            </Text>
+
+            <Text style={styles.versionText}>
+              Version 1.0.0
             </Text>
           </View>
         </ScrollView>
@@ -852,10 +731,10 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   );
 };
 
+export default LoginScreen;
+
 /* ============================================================
    STYLES
-   Theme : Navy, Teal, Ivory and Charcoal
-   Developer : Vijay Chaurasiya
 ============================================================ */
 
 const styles = StyleSheet.create({
@@ -875,124 +754,82 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
   },
 
-  /* HERO */
+  /* HEADER */
 
   hero: {
     backgroundColor: COLORS.navy,
     marginHorizontal: -20,
-    paddingTop: 24,
-    paddingBottom: 28,
+    paddingTop: 28,
+    paddingBottom: 38,
+    paddingHorizontal: 20,
     alignItems: 'center',
     borderBottomLeftRadius: 28,
     borderBottomRightRadius: 28,
-    overflow: 'hidden',
-  },
-
-  topAccent: {
-    position: 'absolute',
-    top: 0,
-    width: '100%',
-    height: 5,
-    backgroundColor: COLORS.teal,
-  },
-
-  heroPattern: {
-    position: 'absolute',
-    width: 230,
-    height: 230,
-    borderRadius: 115,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.10)',
-    top: -115,
-    right: -75,
-  },
-
-  emblemOuter: {
-    width: 76,
-    height: 76,
-    borderRadius: 38,
-    borderWidth: 1.5,
-    borderColor: COLORS.teal,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 13,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-  },
-
-  emblemInner: {
-    width: 62,
-    height: 62,
-    borderRadius: 31,
-    backgroundColor: COLORS.white,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
 
   emblem: {
-    fontSize: 37,
-    color: COLORS.navy,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: 'rgba(255,255,255,0.10)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.25)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
   },
 
-  courtName: {
+  emblemText: {
+    color: '#F4D58D',
+    fontSize: 34,
+  },
+
+  courtTitle: {
     color: COLORS.white,
-    fontSize: 17,
-    fontWeight: '900',
-    letterSpacing: 1.1,
-    textAlign: 'center',
+    fontSize: 23,
+    fontWeight: '800',
+    letterSpacing: 2.5,
   },
 
-  courtLocation: {
-    color: '#B9EDE6',
-    fontSize: 14,
-    fontWeight: '900',
+  courtSubtitle: {
+    color: '#D4DFEF',
+    fontSize: 13,
+    fontWeight: '600',
     letterSpacing: 3,
-    marginTop: 5,
+    marginTop: 4,
   },
 
   heroDivider: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    width: 48,
+    height: 2,
+    backgroundColor: COLORS.teal,
+    marginTop: 16,
+    marginBottom: 12,
+    borderRadius: 2,
+  },
+
+  heroDescription: {
+    color: COLORS.white,
+    fontSize: 15,
+    fontWeight: '600',
+    letterSpacing: 0.5,
+  },
+
+  securePill: {
     marginTop: 15,
-    gap: 10,
+    backgroundColor: 'rgba(32,184,166,0.16)',
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(32,184,166,0.35)',
   },
 
-  heroDividerLine: {
-    width: 43,
-    height: 1,
-    backgroundColor: COLORS.teal,
-    opacity: 0.8,
-  },
-
-  heroDividerDiamond: {
-    width: 7,
-    height: 7,
-    backgroundColor: COLORS.teal,
-    transform: [{ rotate: '45deg' }],
-  },
-
-  dashboardPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.white,
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-    borderRadius: 25,
-    marginTop: 15,
-    gap: 7,
-  },
-
-  dashboardDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-    backgroundColor: COLORS.teal,
-  },
-
-  dashboardPillText: {
-    color: COLORS.navy,
+  securePillText: {
+    color: '#8CE5D9',
     fontSize: 10,
-    fontWeight: '900',
-    letterSpacing: 1.1,
+    fontWeight: '800',
+    letterSpacing: 1.2,
   },
 
   /* LOGIN CARD */
@@ -1000,14 +837,14 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: COLORS.white,
     borderRadius: 20,
-    marginTop: -12,
+    marginTop: -14,
     paddingHorizontal: 20,
-    paddingTop: 24,
-    paddingBottom: 24,
+    paddingTop: 25,
+    paddingBottom: 25,
     elevation: 5,
     shadowColor: COLORS.navy,
     shadowOpacity: 0.09,
-    shadowRadius: 15,
+    shadowRadius: 14,
     shadowOffset: {
       width: 0,
       height: 5,
@@ -1018,249 +855,229 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 24,
   },
 
-  headingContent: {
-    flex: 1,
-    paddingRight: 5,
-  },
-
-  cardTitle: {
+  heading: {
     color: COLORS.charcoal,
-    fontSize: 25,
-    fontWeight: '900',
-    letterSpacing: -0.6,
+    fontSize: 23,
+    fontWeight: '800',
   },
 
-  cardSubtitle: {
+  subHeading: {
     color: COLORS.muted,
-    fontSize: 11,
+    fontSize: 12,
     marginTop: 5,
   },
 
-  secureBadge: {
-    flexDirection: 'row',
+  lockBadge: {
+    width: 42,
+    height: 42,
+    borderRadius: 13,
+    backgroundColor: COLORS.tealLight,
     alignItems: 'center',
-    backgroundColor: COLORS.greenLight,
-    paddingHorizontal: 9,
-    paddingVertical: 6,
-    borderRadius: 20,
-    gap: 4,
+    justifyContent: 'center',
   },
 
-  secureIcon: {
-    color: COLORS.green,
-    fontSize: 12,
-    fontWeight: '900',
-  },
-
-  secureText: {
-    color: COLORS.green,
-    fontSize: 9,
-    fontWeight: '900',
-    letterSpacing: 0.5,
-  },
-
-  /* LABELS */
-
-  label: {
-    color: COLORS.charcoal,
-    fontSize: 12,
-    fontWeight: '800',
-    marginTop: 14,
-    marginBottom: 7,
+  lockIcon: {
+    fontSize: 19,
   },
 
   /* INPUTS */
 
+  inputLabel: {
+    color: COLORS.charcoal,
+    fontSize: 13,
+    fontWeight: '700',
+    marginBottom: 9,
+  },
+
   inputContainer: {
-    height: 52,
+    width: '100%',
+    height: 54,
+    backgroundColor: COLORS.input,
     borderWidth: 1,
     borderColor: COLORS.border,
     borderRadius: 11,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.input,
+    paddingHorizontal: 13,
+    marginBottom: 19,
   },
 
   inputIcon: {
-    width: 43,
-    textAlign: 'center',
-    color: COLORS.tealDark,
-    fontSize: 22,
-    fontWeight: '700',
+    fontSize: 17,
+    marginRight: 11,
   },
 
-  input: {
+  textInput: {
     flex: 1,
     height: '100%',
     color: COLORS.charcoal,
-    fontSize: 13,
-    fontWeight: '600',
-    paddingHorizontal: 4,
+    fontSize: 14,
+    paddingVertical: 0,
   },
 
-  eyeButton: {
-    paddingHorizontal: 13,
-    paddingVertical: 12,
+  passwordToggle: {
+    paddingVertical: 10,
+    paddingLeft: 8,
   },
 
-  eyeText: {
-    color: COLORS.navy,
+  passwordToggleText: {
+    color: COLORS.tealDark,
     fontSize: 10,
-    fontWeight: '900',
+    fontWeight: '800',
     letterSpacing: 0.5,
   },
 
   /* CAPTCHA */
 
-  captchaRow: {
+  captchaHeading: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    gap: 8,
   },
 
-  captchaBox: {
+  captchaHint: {
+    color: COLORS.muted,
+    fontSize: 10,
+    marginBottom: 9,
+  },
+
+  captchaRow: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 9,
+    marginBottom: 20,
+  },
+
+  captchaQuestion: {
     flex: 1,
-    height: 62,
-    borderRadius: 11,
-    backgroundColor: COLORS.tealLight,
+    height: 48,
+    backgroundColor: '#EEF2F8',
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#B8E7DF',
+    borderColor: COLORS.border,
   },
 
-  captchaSmallLabel: {
-    color: COLORS.charcoalLight,
-    fontSize: 8,
-    fontWeight: '900',
-    letterSpacing: 1.2,
-    marginBottom: 3,
-  },
-
-  captchaText: {
-    color: COLORS.charcoal,
-    fontSize: 21,
-    fontWeight: '900',
+  captchaQuestionText: {
+    color: COLORS.navy,
+    fontSize: 17,
+    fontWeight: '800',
     letterSpacing: 1,
   },
 
-  captchaOperator: {
-    color: COLORS.tealDark,
+  captchaInput: {
+    width: 88,
+    height: 48,
+    backgroundColor: COLORS.input,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 10,
+    textAlign: 'center',
+    color: COLORS.charcoal,
+    fontSize: 14,
+    fontWeight: '700',
+    padding: 0,
   },
 
   refreshButton: {
-    width: 47,
-    height: 62,
-    borderRadius: 11,
-    backgroundColor: COLORS.navy,
-    justifyContent: 'center',
+    width: 43,
+    height: 48,
+    borderRadius: 10,
+    backgroundColor: COLORS.tealLight,
     alignItems: 'center',
+    justifyContent: 'center',
   },
 
-  refreshText: {
-    fontSize: 29,
-    color: COLORS.white,
+  refreshIcon: {
+    color: COLORS.tealDark,
+    fontSize: 27,
     fontWeight: '700',
-  },
-
-  captchaInput: {
-    width: 83,
-    height: 62,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 11,
-    backgroundColor: COLORS.input,
-    textAlign: 'center',
-    color: COLORS.charcoal,
-    fontSize: 15,
-    fontWeight: '900',
   },
 
   /* BUTTONS */
 
   primaryButton: {
-    height: 54,
+    width: '100%',
+    alignSelf: 'stretch',
+    height: 55,
     borderRadius: 11,
-    marginTop: 23,
     backgroundColor: COLORS.navy,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 3,
-    shadowColor: COLORS.navyDark,
-    shadowOpacity: 0.22,
-    shadowRadius: 6,
-    shadowOffset: {
-      width: 0,
-      height: 3,
-    },
   },
 
-  verifyButton: {
-    height: 54,
-    borderRadius: 11,
-    marginTop: 22,
-    backgroundColor: COLORS.tealDark,
+  buttonContent: {
+    width: '100%',
     flexDirection: 'row',
-    justifyContent: 'center',
     alignItems: 'center',
-    elevation: 3,
+    justifyContent: 'center',
   },
 
   primaryButtonText: {
     color: COLORS.white,
-    fontSize: 13,
-    fontWeight: '900',
+    fontSize: 14,
+    fontWeight: '800',
     letterSpacing: 1.1,
   },
 
   buttonArrow: {
     color: COLORS.white,
-    fontSize: 21,
-    fontWeight: '800',
-    marginLeft: 13,
+    fontSize: 22,
+    fontWeight: '600',
+    marginLeft: 12,
+    position: 'absolute',
+    right: 18,
   },
 
   disabledButton: {
-    opacity: 0.55,
+    opacity: 0.65,
   },
 
-  buttonHint: {
-    textAlign: 'center',
+  bottomHint: {
     color: COLORS.muted,
-    fontSize: 10,
-    marginTop: 10,
-    lineHeight: 16,
+    fontSize: 11,
+    textAlign: 'center',
+    marginTop: 13,
   },
 
-  /* OTP */
+  /* OTP SECTION */
 
   otpSection: {
-    marginTop: 7,
+    width: '100%',
+    alignSelf: 'stretch',
+    marginTop: 12,
     alignItems: 'center',
   },
 
-  otpTopLine: {
+  sectionDivider: {
     width: '100%',
     height: 1,
     backgroundColor: COLORS.border,
-    marginTop: 23,
-    marginBottom: 20,
+    marginBottom: 22,
   },
 
-  otpIconCircle: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
+  otpHeading: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+
+  otpIconContainer: {
+    width: 43,
+    height: 43,
+    borderRadius: 12,
     backgroundColor: COLORS.tealLight,
-    borderWidth: 1,
-    borderColor: '#B8E7DF',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 12,
+    marginRight: 12,
   },
 
   otpIcon: {
@@ -1268,145 +1085,190 @@ const styles = StyleSheet.create({
     fontSize: 22,
   },
 
+  otpHeadingText: {
+    flex: 1,
+  },
+
   otpTitle: {
     color: COLORS.charcoal,
-    fontSize: 20,
-    fontWeight: '900',
+    fontSize: 16,
+    fontWeight: '800',
   },
 
   otpSubtitle: {
-    color: COLORS.charcoalLight,
+    color: COLORS.muted,
     fontSize: 11,
-    textAlign: 'center',
-    marginTop: 7,
-    lineHeight: 18,
-    paddingHorizontal: 5,
+    marginTop: 4,
+    lineHeight: 16,
   },
+
+  /* OTP INPUT */
 
   otpInputWrapper: {
-    position: 'relative',
-    height: 59,
     width: '100%',
-    marginTop: 20,
-    justifyContent: 'center',
+    alignSelf: 'stretch',
+    marginTop: 18,
+    marginBottom: 8,
+    position: 'relative',
   },
 
-  otpRow: {
+  otpBoxesContainer: {
+    width: '100%',
     flexDirection: 'row',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     gap: 12,
   },
 
   otpBox: {
-    width: 54,
-    height: 58,
-    borderRadius: 11,
-    borderWidth: 1.3,
+    flex: 1,
+    height: 56,
+    borderWidth: 1.5,
     borderColor: COLORS.border,
+    borderRadius: 12,
     backgroundColor: COLORS.input,
     justifyContent: 'center',
     alignItems: 'center',
   },
 
-  activeOtpBox: {
-    borderColor: COLORS.teal,
-    borderWidth: 2,
+  otpBoxActive: {
+    borderColor: COLORS.tealDark,
     backgroundColor: COLORS.tealLight,
   },
 
-  filledOtpBox: {
-    backgroundColor: '#E5F7F4',
-    borderColor: COLORS.tealDark,
+  otpBoxVerified: {
+    borderColor: COLORS.green,
+    backgroundColor: COLORS.greenLight,
   },
 
-  otpBoxText: {
+  otpDigit: {
+    color: COLORS.navy,
     fontSize: 22,
-    fontWeight: '900',
-    color: COLORS.charcoal,
-  },
-
-  otpInput: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: 0,
-    bottom: 0,
-    backgroundColor: 'transparent',
-    color: 'transparent',
-    opacity: 0.02,
-    fontSize: 1,
-    padding: 0,
+    fontWeight: '800',
     textAlign: 'center',
   },
 
-  /* RESEND */
+  hiddenOtpInput: {
+    position: 'absolute',
+    width: '100%',
+    height: 56,
+    opacity: 0,
+    color: 'transparent',
+  },
+
+  /* VERIFY AND LOGIN BUTTON WRAPPER */
+
+  actionButtonWrapper: {
+    width: '100%',
+    alignSelf: 'stretch',
+    marginTop: 18,
+  },
+
+  verifyButton: {
+    width: '100%',
+    alignSelf: 'stretch',
+    height: 56,
+    borderRadius: 11,
+    backgroundColor: COLORS.tealDark,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 3,
+  },
+
+  loginButton: {
+    width: '100%',
+    alignSelf: 'stretch',
+    height: 56,
+    borderRadius: 12,
+    backgroundColor: COLORS.tealDark,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 4,
+    shadowColor: COLORS.tealDark,
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    shadowOffset: {
+      width: 0,
+      height: 3,
+    },
+  },
+
+  /* RESEND OTP */
 
   resendButton: {
-    alignItems: 'center',
-    marginTop: 17,
-    paddingVertical: 9,
+    alignSelf: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+    marginTop: 5,
   },
 
   resendText: {
-    fontSize: 12,
-    color: COLORS.charcoalLight,
-  },
-
-  resendHighlight: {
     color: COLORS.tealDark,
-    fontWeight: '900',
+    fontSize: 12,
+    fontWeight: '700',
   },
 
-  /* OTP VERIFIED */
+  /* VERIFIED MESSAGE */
 
   verifiedMessage: {
+    width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: COLORS.greenLight,
-    borderWidth: 1,
-    borderColor: '#B8E7D2',
     borderRadius: 10,
-    paddingVertical: 13,
-    paddingHorizontal: 12,
-    marginTop: 20,
-    width: '100%',
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+    marginTop: 17,
   },
 
   verifiedIcon: {
     color: COLORS.green,
-    fontSize: 19,
+    fontSize: 17,
     fontWeight: '900',
-    marginRight: 9,
+    marginRight: 8,
   },
 
   verifiedText: {
     color: COLORS.green,
     fontSize: 12,
-    fontWeight: '900',
+    fontWeight: '800',
+  },
+
+  loginHint: {
+    color: COLORS.muted,
+    fontSize: 11,
+    textAlign: 'center',
+    marginTop: 13,
+    lineHeight: 17,
   },
 
   /* FOOTER */
 
   footer: {
     alignItems: 'center',
-    marginTop: 24,
-    paddingHorizontal: 5,
-  },
-
-  footerTitle: {
-    fontSize: 9,
-    color: COLORS.charcoalLight,
-    fontWeight: '900',
-    letterSpacing: 0.8,
-    textAlign: 'center',
+    paddingTop: 24,
+    paddingBottom: 12,
   },
 
   footerText: {
+    color: COLORS.navy,
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 0.4,
+  },
+
+  footerSubText: {
     color: COLORS.muted,
     fontSize: 10,
-    marginTop: 6,
+    marginTop: 5,
+  },
+
+  versionText: {
+    color: COLORS.muted,
+    fontSize: 9,
+    marginTop: 8,
   },
 });
-
-export default LoginScreen;

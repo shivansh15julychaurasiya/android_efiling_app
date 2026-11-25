@@ -48,7 +48,7 @@ export const generateOtp = async (
   }
 
   const response = await apiClient.post<ApiResponse>(
-    '/generateOTP',
+    '/generateOTPApp',
     request,
   );
 

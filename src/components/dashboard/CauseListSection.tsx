@@ -14,6 +14,16 @@ import {
 import { CauseListRow } from '../../types/dashboard';
 import styles from '../../styles/dashboardStyles';
 
+/*
+ * ============================================================
+ * Developed By : Vijay Chaurasiya
+ * Module       : Today's Cause List
+ * Application  : Allahabad High Court eFiling App
+ * Description  : Displays listed cases with Last Order and
+ *                Case Status actions.
+ * ============================================================
+ */
+
 type Props = {
   causeList: CauseListRow[];
   loading: boolean;
@@ -33,7 +43,7 @@ const CauseListSection: React.FC<Props> = ({
 }) => {
   const { height } = useWindowDimensions();
 
-  // Limit the cause-list height on phones.
+  // Keep the cause list independently scrollable on phones.
   const causeListHeight = Math.min(height * 0.45, 400);
 
   return (
@@ -44,7 +54,10 @@ const CauseListSection: React.FC<Props> = ({
 
       {loading ? (
         <View style={styles.loaderContainer}>
-          <ActivityIndicator size="small" />
+          <ActivityIndicator
+            size="small"
+            color="#D4AF37"
+          />
           <Text style={styles.loaderText}>
             Loading today's cause list...
           </Text>
@@ -52,8 +65,8 @@ const CauseListSection: React.FC<Props> = ({
       ) : causeList.length > 0 ? (
         <ScrollView
           style={{ height: causeListHeight }}
-          nestedScrollEnabled={true}
-          showsVerticalScrollIndicator={true}
+          nestedScrollEnabled
+          showsVerticalScrollIndicator
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={{ paddingBottom: 8 }}
         >
@@ -62,13 +75,33 @@ const CauseListSection: React.FC<Props> = ({
               key={`${String(
                 row.cause_reg_no ?? row.case_no ?? 'case',
               )}-${index}`}
-              style={styles.causeItem}
+              style={({ pressed }) => [
+                styles.causeItem,
+                {
+                  borderColor: pressed ? '#D4AF37' : '#DCE5F0',
+                  opacity: pressed ? 0.94 : 1,
+                },
+              ]}
               onPress={() =>
                 console.log('Selected Cause List:', row)
               }
             >
-              <View style={styles.causeNumber}>
-                <Text style={styles.causeNumberText}>
+              <View
+                style={[
+                  styles.causeNumber,
+                  {
+                    backgroundColor: '#102D50',
+                    borderColor: '#D4AF37',
+                    borderWidth: 1,
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.causeNumberText,
+                    { color: '#F2D68A' },
+                  ]}
+                >
                   {index + 1}
                 </Text>
               </View>
@@ -101,10 +134,12 @@ const CauseListSection: React.FC<Props> = ({
                   style={{
                     flexDirection: 'row',
                     alignItems: 'center',
+                    flexWrap: 'wrap',
                     marginTop: 10,
                     gap: 10,
                   }}
                 >
+                  {/* Last Order Button */}
                   <Pressable
                     onPress={(event) => {
                       event.stopPropagation();
@@ -114,14 +149,16 @@ const CauseListSection: React.FC<Props> = ({
                     style={({ pressed }) => ({
                       flexDirection: 'row',
                       alignItems: 'center',
-                      backgroundColor: '#EEF4FF',
+                      backgroundColor: !row.lastOrder
+                        ? '#F0F2F5'
+                        : '#EEF3FA',
                       borderWidth: 1,
-                      borderColor: '#D5E3FA',
-                      paddingHorizontal: 12,
-                      paddingVertical: 7,
+                      borderColor: '#C9D8E9',
+                      paddingHorizontal: 13,
+                      paddingVertical: 8,
                       borderRadius: 20,
                       opacity: !row.lastOrder
-                        ? 0.5
+                        ? 0.45
                         : pressed
                           ? 0.7
                           : 1,
@@ -129,15 +166,16 @@ const CauseListSection: React.FC<Props> = ({
                   >
                     <Text
                       style={{
-                        fontSize: 13,
-                        color: '#e0620d',
-                        fontWeight: '600',
+                        fontSize: 12,
+                        color: '#102D50',
+                        fontWeight: '800',
                       }}
                     >
                       📄 Last Order
                     </Text>
                   </Pressable>
 
+                  {/* Case Status Button */}
                   <Pressable
                     onPress={(event) => {
                       event.stopPropagation();
@@ -158,20 +196,20 @@ const CauseListSection: React.FC<Props> = ({
                     style={({ pressed }) => ({
                       flexDirection: 'row',
                       alignItems: 'center',
-                      backgroundColor: '#EAF7F0',
+                      backgroundColor: '#EAF6F1',
                       borderWidth: 1,
-                      borderColor: '#CBE9D7',
-                      paddingHorizontal: 12,
-                      paddingVertical: 7,
+                      borderColor: '#B9DFCE',
+                      paddingHorizontal: 13,
+                      paddingVertical: 8,
                       borderRadius: 20,
                       opacity: pressed ? 0.7 : 1,
                     })}
                   >
                     <Text
                       style={{
-                        fontSize: 13,
-                        color: '#15965A',
-                        fontWeight: '600',
+                        fontSize: 12,
+                        color: '#16845A',
+                        fontWeight: '800',
                       }}
                     >
                       ✓ Status
@@ -185,6 +223,7 @@ const CauseListSection: React.FC<Props> = ({
       ) : (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyIcon}>📅</Text>
+
           <Text style={styles.emptyText}>
             No cases listed for today
           </Text>

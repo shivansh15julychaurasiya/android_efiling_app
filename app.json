@@ -5,7 +5,7 @@
     "slug": "EfilingApp",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/adv_dash.png",
+    "icon": "./assets/advocate-icon.png",
     "userInterfaceStyle": "light",
 
     "ios": {
@@ -16,7 +16,7 @@
       "usesCleartextTraffic": true,
       "adaptiveIcon": {
         "backgroundColor": "#071A3D",
-        "foregroundImage": "./assets/adv_dash.png"
+        "foregroundImage": "./assets/advocate-icon.png"
       },
       "predictiveBackGestureEnabled": false,
       "package": "com.vijay15july.EfilingApp"
@@ -31,7 +31,7 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/splash.png",
+          "image": "./assets/adv_dash.png",
           "imageWidth": 400,
           "resizeMode": "contain",
           "backgroundColor": "#071A3D"

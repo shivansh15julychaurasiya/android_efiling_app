@@ -5,7 +5,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import LoginScreen from '../screeen/loginScreen';
 import OtpScreen from '../screeen/otpScreen';
-import AdvocateDashboard from '../screeen/AdvocateDashboard';
+import AdvocateDashboard from '../screeen/advocateDashboard';
 import CaseFilePetitionScreen from '../screeen/caseFilePetitionScreen';
 import CaseFileRespondentScreen from '../screeen/caseFileRespondentScreen';
 import DraftManagementScreen from '../screeen/DraftManagementScreen';

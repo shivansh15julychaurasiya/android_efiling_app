@@ -1,3 +1,13 @@
+
+/*
+ * ============================================================
+ * Developer : Vijay Chaurasiya
+ * Project   : Allahabad High Court eFiling Application
+ * Module    : OTP Verification Screen
+ * Features  : OTP Verification, Resend OTP, Session Validation
+ * ============================================================
+ */
+
 import React, {useEffect, useRef, useState} from 'react';
 
 import {
@@ -42,7 +52,10 @@ type Props = NativeStackScreenProps<
 
 const COLORS = {
   navy: '#071A3D',
+  navyLight: '#0D2855',
   gold: '#D4AF37',
+  teal: '#087F8C',
+  tealDark: '#066B76',
   white: '#FFFFFF',
   text: '#172033',
   muted: '#6B7280',
@@ -62,112 +75,123 @@ const OtpScreen = ({
   const [seconds, setSeconds] = useState(60);
 
   const inputRef = useRef<TextInput>(null);
+  const verifyInProgress = useRef(false);
 
   /*
-   * OTP resend timer
+   * ============================================================
+   * OTP RESEND TIMER
+   * ============================================================
    */
-useEffect(() => {
-  if (seconds <= 0) {
-    return;
-  }
 
-  const timer = setTimeout(() => {
-    setSeconds(current => Math.max(0, current - 1));
-  }, 1000);
-
-  return () => clearTimeout(timer);
-}, [seconds]);
-
-  /*
-   * Verify OTP
-   */
-  
-const verifyInProgress = useRef(false);
-
-const handleVerify = async () => {
-  if (verifyInProgress.current || loading) {
-    return;
-  }
-
-  const normalizedOtp = otp.trim();
-
-  if (!/^\d{4}$/.test(normalizedOtp)) {
-    Alert.alert(
-      'Invalid OTP',
-      'Please enter a valid 4-digit OTP.',
-    );
-    return;
-  }
-
-  verifyInProgress.current = true;
-
-  try {
-    setLoading(true);
-
-    const response = await validateOtp(
-      username,
-      normalizedOtp,
-    );
-
-    const isSuccess =
-      response?.response?.toUpperCase() === 'TRUE';
-
-    if (!isSuccess) {
-      const message =
-        typeof response?.data === 'string'
-          ? response.data
-          : response?.message ||
-            'Incorrect OTP. Please try again.';
-
-      Alert.alert('Verification Failed', message);
+  useEffect(() => {
+    if (seconds <= 0) {
       return;
     }
 
-    // Save local authentication state.
-    await saveAuthentication(username);
+    const timer = setTimeout(() => {
+      setSeconds(current => Math.max(0, current - 1));
+    }, 1000);
 
-    // Check the actual server session separately.
-    const { getSessionCookie } = await import('../api/apiClient');
-
-    const cookie = await getSessionCookie();
-
-    if (__DEV__) {
-      console.log('[LOGIN SESSION RESULT]', {
-        authenticated: true,
-        sessionAvailable: !!cookie,
-      });
-    }
-
-    navigation.reset({
-      index: 0,
-      routes: [
-        { name: 'AdvocateDashboard' },
-      ],
-    });
-  } catch (error) {
-    console.log('[OTP VERIFICATION ERROR]', error);
-
-    Alert.alert(
-      'Verification Error',
-      getApiErrorMessage(error),
-    );
-  } finally {
-    verifyInProgress.current = false;
-    setLoading(false);
-  }
-};
-
-
-
-
-
-
-
-  
+    return () => clearTimeout(timer);
+  }, [seconds]);
 
   /*
-   * Resend OTP
+   * ============================================================
+   * VERIFY OTP
+   * ============================================================
    */
+
+  const handleVerify = async () => {
+    if (verifyInProgress.current || loading) {
+      return;
+    }
+
+    const normalizedOtp = otp.trim();
+
+    if (!/^\d{4}$/.test(normalizedOtp)) {
+      Alert.alert(
+        'Invalid OTP',
+        'Please enter a valid 4-digit OTP.',
+      );
+      return;
+    }
+
+    verifyInProgress.current = true;
+
+    try {
+      setLoading(true);
+
+      const response = await validateOtp(
+        username,
+        normalizedOtp,
+      );
+
+      const isSuccess =
+        response?.response?.toUpperCase() === 'TRUE';
+
+      if (!isSuccess) {
+        const message =
+          typeof response?.data === 'string'
+            ? response.data
+            : response?.message ||
+              'Incorrect OTP. Please try again.';
+
+        Alert.alert(
+          'Verification Failed',
+          message,
+        );
+
+        return;
+      }
+
+      // Save local authentication state.
+      await saveAuthentication(username);
+
+      // Check actual server session separately.
+      const {getSessionCookie} = await import(
+        '../api/apiClient'
+      );
+
+      const cookie = await getSessionCookie();
+
+      if (__DEV__) {
+        console.log('[LOGIN SESSION RESULT]', {
+          authenticated: true,
+          sessionAvailable: !!cookie,
+        });
+      }
+
+      // Navigate to dashboard.
+      navigation.reset({
+        index: 0,
+        routes: [
+          {name: 'AdvocateDashboard'},
+        ],
+      });
+
+    } catch (error) {
+      console.log(
+        '[OTP VERIFICATION ERROR]',
+        error,
+      );
+
+      Alert.alert(
+        'Verification Error',
+        getApiErrorMessage(error),
+      );
+
+    } finally {
+      verifyInProgress.current = false;
+      setLoading(false);
+    }
+  };
+
+  /*
+   * ============================================================
+   * RESEND OTP
+   * ============================================================
+   */
+
   const handleResend = async () => {
     if (seconds > 0 || resending) {
       return;
@@ -176,9 +200,7 @@ const handleVerify = async () => {
     try {
       setResending(true);
 
-      const response = await generateOtp(
-        username,
-      );
+      const response = await generateOtp(username);
 
       console.log(
         'Resend OTP Response:',
@@ -186,8 +208,7 @@ const handleVerify = async () => {
       );
 
       if (
-        response?.response?.toUpperCase() ===
-        'TRUE'
+        response?.response?.toUpperCase() === 'TRUE'
       ) {
         setOtp('');
         setSeconds(60);
@@ -200,6 +221,7 @@ const handleVerify = async () => {
         setTimeout(() => {
           inputRef.current?.focus();
         }, 300);
+
       } else {
         const message =
           typeof response?.data === 'string'
@@ -212,6 +234,7 @@ const handleVerify = async () => {
           message,
         );
       }
+
     } catch (error) {
       console.log(
         'Resend OTP Error:',
@@ -222,13 +245,21 @@ const handleVerify = async () => {
         'Connection Error',
         getApiErrorMessage(error),
       );
+
     } finally {
       setResending(false);
     }
   };
 
+  /*
+   * ============================================================
+   * SCREEN UI
+   * ============================================================
+   */
+
   return (
     <View style={styles.container}>
+
       <StatusBar
         barStyle="light-content"
         backgroundColor={COLORS.navy}
@@ -242,17 +273,19 @@ const handleVerify = async () => {
             : undefined
         }
       >
+
         <ScrollView
           contentContainerStyle={styles.scroll}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* Header */}
+
+          {/* HEADER */}
+
           <View style={styles.header}>
+
             <Pressable
-              onPress={() =>
-                navigation.goBack()
-              }
+              onPress={() => navigation.goBack()}
               style={styles.backButton}
             >
               <Text style={styles.backText}>
@@ -273,15 +306,22 @@ const handleVerify = async () => {
             <Text style={styles.subtitle}>
               Secure e-Filing Authentication
             </Text>
+
           </View>
 
-          {/* Card */}
+          {/* OTP CARD */}
+
           <View style={styles.card}>
+
+            {/* OTP ICON */}
+
             <View style={styles.otpIcon}>
               <Text style={styles.otpIconText}>
                 ✉
               </Text>
             </View>
+
+            {/* TITLE */}
 
             <Text style={styles.title}>
               Enter Verification Code
@@ -297,15 +337,15 @@ const handleVerify = async () => {
               {username}
             </Text>
 
-            {/* Hidden real input */}
+            {/* HIDDEN REAL INPUT */}
+
             <TextInput
               ref={inputRef}
               value={otp}
               onChangeText={value => {
-                const numeric =
-                  value
-                    .replace(/[^0-9]/g, '')
-                    .slice(0, 4);
+                const numeric = value
+                  .replace(/[^0-9]/g, '')
+                  .slice(0, 4);
 
                 setOtp(numeric);
               }}
@@ -320,60 +360,33 @@ const handleVerify = async () => {
               onSubmitEditing={handleVerify}
             />
 
-            {/* OTP Boxes */}
+            {/* OTP BOXES */}
+
             <View style={styles.otpBoxes}>
-              {Array.from({
-                length: 4,
-              }).map((_, index) => (
+              {Array.from({length: 4}).map((_, index) => (
                 <Pressable
                   key={index}
-                  onPress={() =>
-                    inputRef.current?.focus()
-                  }
+                  onPress={() => inputRef.current?.focus()}
                   style={[
                     styles.otpBox,
-                    otp[index] &&
-                      styles.otpBoxFilled,
+                    otp[index] ? styles.otpBoxFilled : null,
                   ]}
                 >
-                  <Text
-                    style={styles.otpDigit}
-                  >
+                  <Text style={styles.otpDigit}>
                     {otp[index] || ''}
                   </Text>
                 </Pressable>
               ))}
             </View>
 
-            {/* Verify Button */}
-            <Pressable
-              onPress={handleVerify}
-              disabled={
-                loading ||
-                otp.length !== 4
-              }
-              style={[
-                styles.verifyButton,
-                (loading ||
-                  otp.length !== 4) &&
-                  styles.disabledButton,
-              ]}
-            >
-              {loading ? (
-                <ActivityIndicator
-                  color={COLORS.white}
-                />
-              ) : (
-                <Text
-                  style={styles.verifyText}
-                >
-                  Verify & Continue
-                </Text>
-              )}
-            </Pressable>
+            {/* VERIFY OTP BUTTON */}
 
-            {/* Resend */}
+            
+
+            {/* RESEND OTP */}
+
             <View style={styles.resendRow}>
+
               <Text style={styles.resendLabel}>
                 Didn't receive the OTP?
               </Text>
@@ -387,48 +400,52 @@ const handleVerify = async () => {
                   onPress={handleResend}
                   disabled={resending}
                 >
-                  <Text
-                    style={
-                      styles.resendButton
-                    }
-                  >
+                  <Text style={styles.resendButton}>
                     {resending
                       ? 'Sending...'
                       : 'Resend OTP'}
                   </Text>
                 </Pressable>
               )}
+
             </View>
 
-            {/* Change Username */}
+            {/* CHANGE USERNAME */}
+
             <Pressable
-              onPress={() =>
-                navigation.navigate('Login')
-              }
+              onPress={() => navigation.navigate('Login')}
               style={styles.changeUser}
             >
-              <Text
-                style={
-                  styles.changeUserText
-                }
-              >
+              <Text style={styles.changeUserText}>
                 ← Change username
               </Text>
             </Pressable>
+
           </View>
 
-          {/* Footer */}
+          {/* FOOTER */}
+
           <Text style={styles.footer}>
             Your OTP is confidential. Do not
             share it with anyone.
           </Text>
+
         </ScrollView>
+
       </KeyboardAvoidingView>
+
     </View>
   );
 };
 
+/*
+ * ============================================================
+ * STYLES
+ * ============================================================
+ */
+
 const styles = StyleSheet.create({
+
   flex: {
     flex: 1,
   },
@@ -442,6 +459,8 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingBottom: 30,
   },
+
+  // HEADER
 
   header: {
     backgroundColor: COLORS.navy,
@@ -460,8 +479,7 @@ const styles = StyleSheet.create({
     height: 42,
     borderRadius: 21,
     borderWidth: 1,
-    borderColor:
-      'rgba(255,255,255,0.25)',
+    borderColor: 'rgba(255,255,255,0.25)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -502,13 +520,17 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
 
+  // CARD
+
   card: {
     backgroundColor: COLORS.white,
     marginHorizontal: 20,
     marginTop: -35,
     borderRadius: 20,
     padding: 24,
-    alignItems: 'center',
+
+    // Full-width buttons with individually centered content.
+    alignItems: 'stretch',
 
     shadowColor: '#000',
     shadowOffset: {
@@ -528,6 +550,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8F3DF',
     alignItems: 'center',
     justifyContent: 'center',
+    alignSelf: 'center',
     marginBottom: 15,
   },
 
@@ -539,6 +562,8 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     fontSize: 21,
     fontWeight: '800',
+    textAlign: 'center',
+    alignSelf: 'center',
   },
 
   description: {
@@ -547,6 +572,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     fontSize: 13,
     marginTop: 10,
+    alignSelf: 'center',
   },
 
   username: {
@@ -554,7 +580,11 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     fontSize: 14,
     marginTop: 5,
+    textAlign: 'center',
+    alignSelf: 'center',
   },
+
+  // OTP INPUT
 
   otpInput: {
     position: 'absolute',
@@ -565,6 +595,7 @@ const styles = StyleSheet.create({
 
   otpBoxes: {
     flexDirection: 'row',
+    justifyContent: 'center',
     gap: 10,
     marginTop: 25,
     marginBottom: 25,
@@ -592,29 +623,67 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
 
+  // VERIFY BUTTON - SAME DESIGN AS LOGIN
+
   verifyButton: {
-    height: 54,
     width: '100%',
-    backgroundColor: COLORS.navy,
+    alignSelf: 'stretch',
+    height: 56,
     borderRadius: 12,
+    marginTop: 5,
+    backgroundColor: COLORS.teal,
+
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+
+    elevation: 4,
+    shadowColor: COLORS.teal,
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    shadowOffset: {
+      width: 0,
+      height: 3,
+    },
+  },
+
+  buttonContent: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
   },
 
-  disabledButton: {
-    opacity: 0.45,
-  },
-
   verifyText: {
     color: COLORS.white,
-    fontSize: 15,
-    fontWeight: '800',
+    fontSize: 16,
+    fontWeight: '900',
+    letterSpacing: 1.5,
   },
+
+  buttonArrow: {
+    color: COLORS.white,
+    fontSize: 25,
+    fontWeight: '900',
+    marginLeft: 12,
+  },
+
+  disabledButton: {
+    opacity: 0.65,
+  },
+
+  buttonPressed: {
+    backgroundColor: COLORS.tealDark,
+    transform: [{scale: 0.98}],
+  },
+
+  // RESEND OTP
 
   resendRow: {
     flexDirection: 'row',
     marginTop: 22,
     alignItems: 'center',
+    justifyContent: 'center',
+    flexWrap: 'wrap',
   },
 
   resendLabel: {
@@ -636,8 +705,11 @@ const styles = StyleSheet.create({
     marginLeft: 5,
   },
 
+  // CHANGE USERNAME
+
   changeUser: {
     marginTop: 20,
+    alignSelf: 'center',
   },
 
   changeUserText: {
@@ -646,6 +718,8 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 
+  // FOOTER
+
   footer: {
     color: COLORS.muted,
     textAlign: 'center',
@@ -653,6 +727,7 @@ const styles = StyleSheet.create({
     marginTop: 25,
     paddingHorizontal: 30,
   },
+
 });
 
 export default OtpScreen;

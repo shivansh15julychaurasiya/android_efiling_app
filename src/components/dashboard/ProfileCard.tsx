@@ -3,6 +3,7 @@ import { Image, Text, View } from 'react-native';
 
 import { LoggedInUser } from '../../types/dashboard';
 import styles from '../../styles/dashboardStyles';
+import { downloadProfileImage } from '../../services/profileImageService';
 /*
  * ============================================================
  * Developed By : Vijay Chaurasiya
